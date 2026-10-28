@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#122f3c">
+  <meta name="description" content="Reparti, palazzine e fisioterapisti dell’Ospedale del Mare. Uno spazio privato per consultare e simulare le assegnazioni.">
+  <title>Fisio · Ospedale del Mare</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="boot.mjs"></script>
+</head>
+<body>
+ <a class="skip" href="#main">Vai al contenuto</a>
+ <div id="auth-gate" class="auth-gate"><div class="auth-card"><span class="brand-icon">✚</span><div class="eyebrow">OSPEDALE DEL MARE</div><h1>Fisio, in connessione</h1><p id="auth-message" role="status">Verifica dell’accesso in corso…</p><button id="login-btn" class="btn btn-primary" hidden>Accedi con Google</button><button id="gate-signout-btn" class="text-btn" hidden>Cambia account</button><details id="setup-details" hidden><summary>Dettagli per l’amministratore</summary><p id="setup-detail-text"></p></details><small>Accesso riservato ai professionisti abilitati.</small></div></div>
+ <div id="application" hidden inert>
+ <aside class="sidebar">
+  <a class="brand" href="#reparti" aria-label="Fisio, pagina reparti"><span class="brand-icon" aria-hidden="true">✚</span><span>Fisio<span class="brand-sub">OSPEDALE DEL MARE</span></span></a>
+  <div class="workspace-label">SPAZIO DI LAVORO <span>PRIVATO</span></div>
+  <nav aria-label="Navigazione principale">
+   <button data-view="reparti" class="nav-item"></button>
+   <button data-view="fisioterapisti" class="nav-item"></button>
+   <button data-view="palazzine" class="nav-item"></button>
+   <span class="nav-heading">SIMULAZIONE</span>
+   <button data-view="registro" class="nav-item"></button>
+  </nav>
+  <div class="sidebar-bottom"><div class="sandbox-mark"><span class="live-dot"></span> Ambiente di simulazione</div><p>Simulazioni condivise tra i dispositivi abilitati.</p><button id="source-btn" class="source-link">Dati di partenza <span>↗</span></button><div class="profile"><span class="avatar" id="profile-avatar">F</span><div><span id="profile-name">Area fisioterapia</span><small id="profile-role">Accesso riservato</small></div><span class="profile-dot"></span></div></div>
+ </aside>
+ <div class="workspace">
+  <header class="topbar"><div class="breadcrumb">Ospedale del Mare <span>/</span> <strong id="breadcrumb-current">Reparti</strong></div><div class="topbar-actions"><button class="text-btn" id="signout-btn">Esci</button><span class="privacy-badge" id="private-badge"></span><button class="icon-btn" id="help-btn" aria-label="Guida al gestionale"></button></div></header>
+  <main id="main" tabindex="-1">
+   <div class="page-heading"><div><div class="eyebrow">COORDINAMENTO FISIOTERAPIA</div><h1 id="page-title">Reparti e assegnazioni</h1><p id="page-description">Un quadro chiaro dei reparti e dei professionisti di riferimento.</p></div><button class="btn btn-white" id="export-btn"></button></div>
+   <section class="metrics" aria-label="Riepilogo organizzazione" id="metrics"></section>
+   <div class="scenario-strip"><div class="scenario-icon" id="scenario-icon"></div><div><strong>Lo scenario condiviso</strong><p id="scenario-status">Configurazione iniziale · nessuna modifica</p></div><span class="local-label" id="local-label">Sincronizzazione Firebase</span><button class="text-btn" id="reset-btn">Ripristina</button></div>
+   <section id="content" aria-label="Consultazione e organizzazione"></section>
+   <footer class="page-footer"><span>Ospedale del Mare · Area fisioterapia</span><span>Assegnazioni prevalenti · dati di partenza 13.10.2026</span></footer>
+  </main>
+ </div>
+ </div>
+ <dialog id="modal" aria-labelledby="modal-title"></dialog>
+ <div class="toast" id="toast" role="status" aria-live="polite"></div>
+ <noscript>Attiva JavaScript per utilizzare ricerca, filtri e assegnazioni simulate.</noscript>
+</body>
+</html>
