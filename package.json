@@ -1,0 +1,22 @@
+{
+  "name": "odm-fisio-firebase",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:preview": "node scripts/build.mjs --preview",
+    "test": "node --test tests/model.test.mjs tests/sync.test.mjs tests/build.test.mjs",
+    "test:rules": "firebase emulators:exec --only firestore --project demo-odm-fisio \"node --test tests/rules.test.mjs\"",
+    "provision": "node scripts/provision.mjs",
+    "deploy": "npm run build && firebase deploy --only hosting,firestore:rules"
+  },
+  "dependencies": { "firebase": "13.1.0" },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "6.0.0",
+    "esbuild": "^0.25.0",
+    "firebase-admin": "14.5.0",
+    "firebase-tools": "15.34.1"
+  }
+}
