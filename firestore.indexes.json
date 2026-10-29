@@ -1,0 +1,1 @@
+{"indexes":[],"fieldOverrides":[{"collectionGroup":"data","fieldPath":"payload","indexes":[]},{"collectionGroup":"plans","fieldPath":"rows","indexes":[]},{"collectionGroup":"plans","fieldPath":"assignments","indexes":[]}]}

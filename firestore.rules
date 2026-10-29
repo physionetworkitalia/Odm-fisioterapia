@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function googleUser() {
+   return request.auth != null && request.auth.token.email_verified == true
+    && request.auth.token.firebase.sign_in_provider == 'google.com';
+  }
+  function memberPath(c) { return /databases/$(database)/documents/clinics/$(c)/members/$(request.auth.uid); }
+  function member(c) { return googleUser() && exists(memberPath(c)) && get(memberPath(c)).data.active == true; }
+  function coordinator(c) { return member(c) && get(memberPath(c)).data.role == 'coordinator'; }
+  function staffId(s) { return s is string && s.matches('F(0[1-9]|1[0-5])'); }
+  function memberData(d) {
+   return d.keys().hasAll(['role','staffId','active']) && d.keys().hasOnly(['role','staffId','active'])
+    && d.active is bool && d.role in ['coordinator','therapist']
+    && ((d.role == 'coordinator' && (d.staffId == '' || staffId(d.staffId))) || (d.role == 'therapist' && staffId(d.staffId)));
+  }
+  function payload(p) {
+   return p is map && p.keys().hasAll(['version','staff','patients','availability','plans','wardFloors','rotations','dhIsBarra'])
+    && p.keys().hasOnly(['version','staff','patients','availability','plans','wardFloors','rotations','dhIsBarra'])
+    && p.version == 2 && p.staff is list && p.staff.size() == 15
+    && p.patients is list && p.patients.size() <= 500 && p.availability is map && p.plans is map
+    && p.wardFloors is map && p.rotations is map && p.dhIsBarra is bool;
+  }
+  function stateData(d) {
+   return d.keys().hasAll(['payload','revision','updatedBy','updatedAt']) && d.keys().hasOnly(['payload','revision','updatedBy','updatedAt'])
+    && payload(d.payload) && d.revision is int && d.updatedBy == request.auth.uid && d.updatedAt == request.time;
+  }
+  match /clinics/{clinic}/members/{uid} {
+   allow get: if googleUser() && (uid == request.auth.uid || coordinator(clinic));
+   allow list: if coordinator(clinic);
+   allow create, update: if coordinator(clinic) && uid != request.auth.uid && memberData(request.resource.data);
+   allow delete: if false;
+  }
+  match /clinics/{clinic}/data/state {
+   allow read: if member(clinic);
+   allow create: if coordinator(clinic) && stateData(request.resource.data) && request.resource.data.revision == 1;
+   allow update: if coordinator(clinic) && stateData(request.resource.data) && request.resource.data.revision == resource.data.revision + 1;
+   allow delete: if false;
+  }
+  match /clinics/{clinic}/plans/{date} {
+   allow read: if member(clinic);
+   function validPlan() { return coordinator(clinic) && date.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}')
+    && request.resource.data.keys().hasAll(['date','version','rows','assignments','sourceRevision','createdBy','createdAt'])
+    && request.resource.data.keys().hasOnly(['date','version','rows','assignments','sourceRevision','createdBy','createdAt'])
+    && request.resource.data.date == date && request.resource.data.rows is list && request.resource.data.rows.size() <= 500
+    && request.resource.data.assignments is map && request.resource.data.assignments.size() == request.resource.data.rows.size()
+    && request.resource.data.sourceRevision == get(/databases/$(database)/documents/clinics/$(clinic)/data/state).data.revision
+    && request.resource.data.version is int
+    && request.resource.data.createdBy == request.auth.uid && request.resource.data.createdAt == request.time; }
+   allow create: if validPlan() && request.resource.data.version == 1;
+   allow update: if validPlan() && request.resource.data.version == resource.data.version + 1
+    && getAfter(/databases/$(database)/documents/clinics/$(clinic)/plans/$(date)/versions/$(string(resource.data.version))).data == resource.data;
+   allow delete: if false;
+   match /versions/{version} {
+    allow read: if member(clinic);
+    allow create: if coordinator(clinic)
+     && version == string(request.resource.data.version)
+     && request.resource.data == get(/databases/$(database)/documents/clinics/$(clinic)/plans/$(date)).data;
+    allow update, delete: if false;
+   }
+   match /completions/{patient} {
+    function assigned() {
+     let p = get(/databases/$(database)/documents/clinics/$(clinic)/plans/$(date)).data;
+     return patient in p.assignments && (coordinator(clinic) || p.assignments[patient] == get(memberPath(clinic)).data.staffId);
+    }
+    allow read: if member(clinic);
+    allow create, update: if member(clinic) && assigned()
+     && request.resource.data.keys().hasAll(['done','updatedBy','updatedAt'])
+     && request.resource.data.keys().hasOnly(['done','updatedBy','updatedAt'])
+     && request.resource.data.done is bool && request.resource.data.updatedBy == request.auth.uid
+     && request.resource.data.updatedAt == request.time;
+    allow delete: if false;
+   }
+  }
+  match /clinics/{clinic}/audit/{event} {
+   allow read: if coordinator(clinic);
+   allow create: if coordinator(clinic) && request.resource.data.keys().hasAll(['action','actor','at'])
+    && request.resource.data.keys().hasOnly(['action','actor','at'])
+    && request.resource.data.action is string && request.resource.data.action.size() <= 200
+    && request.resource.data.actor == request.auth.uid && request.resource.data.at == request.time;
+   allow update, delete: if false;
+  }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
