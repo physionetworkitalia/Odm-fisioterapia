@@ -1,1 +1,30 @@
-
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createRequire} from 'node:module';
+import vm from 'node:vm';
+import {JSDOM} from 'jsdom';
+import {fresh} from '../seed.mjs';
+const E=createRequire(import.meta.url)('../engine.js');
+test('demo UI: accesso, Barra, paziente, revisione, trattamento e confronto stampabile',async()=>{
+ const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
+ const dom=new JSDOM(html,{url:'https://example.test/fisio/',runScripts:'outside-only'}),w=dom.window,d=w.document,$=s=>d.querySelector(s);
+ w.FISIO_CONFIG={};w.FisioEngine=E;w.testFresh=fresh;w.structuredClone=structuredClone;w.TextEncoder=TextEncoder;w.confirm=()=>true;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};
+ let code=await readFile(new URL('../app.mjs',import.meta.url),'utf8');code=code.replace("import './engine.js';",'').replace("import {fresh} from './seed.mjs';",'const fresh=globalThis.testFresh;');
+ new vm.Script(code).runInContext(dom.getInternalVMContext());
+ const flush=()=>new Promise(r=>setTimeout(r,0));const change=el=>el.dispatchEvent(new w.Event('change',{bubbles:true}));
+ assert.equal($('#workspace').hidden,true);assert.equal($('#rows').children.length,0);assert.equal($('#try-demo').hidden,false);
+ $('#try-demo').click();await flush();assert.equal($('#workspace').hidden,false);assert.equal($('#rows').children.length,38);
+ $('[data-view="team"]').click();let status=$('[data-status="F01"]');status.value='Barra';change(status);await flush();assert.match($('[data-personal="F01"]').textContent,/Barra/);
+ $('[data-view="day"]').click();$('#finalize').click();await flush();assert.equal($('#reopen').hidden,false);
+ let checkbox=$('[data-done]');checkbox.checked=true;change(checkbox);await flush();assert.equal($('[data-done]').checked,true);
+ $('#reopen').click();$('#new').click();const form=$('#patient-form');for(const [k,v]of Object.entries({first:'<img src=x onerror=alert(1)>',last:'Nuovo',ward:'Ortopedia',room:'10',diagnosis:'Esempio',treatment:'Mobilizzazione',owner:'F07'}))form.elements[k].value=v;
+ form.dispatchEvent(new w.Event('submit',{bubbles:true,cancelable:true}));await flush();assert.equal($('#rows').children.length,39);assert.equal($('#rows img'),null);assert.match($('#rows').textContent,/<img src=x/);
+ $('#finalize').click();await flush();assert.equal($('#reopen').hidden,false);
+ const firstDay=$('#date').value;const tomorrow=new Date(firstDay+'T12:00:00Z');tomorrow.setUTCDate(tomorrow.getUTCDate()+1);$('#date').value=tomorrow.toISOString().slice(0,10);change($('#date'));await flush();
+ $('[data-view="team"]').click();status=$('[data-status="F07"]');status.value='Barra';change(status);await flush();
+ $('[data-personal="F07"]').click();assert.match($('#print-sheet').textContent,/RIMOSSO/);assert.match($('#print-sheet').textContent,/Passato a/);assert.equal($('#print-sheet img'),null);
+ $('#date').value=firstDay;change($('#date'));await flush();assert.match($('#print-sheet').textContent,/revisione 2/);assert.match($('#print-sheet').textContent,/Nuovo/);
+ dom.window.close();
+});
